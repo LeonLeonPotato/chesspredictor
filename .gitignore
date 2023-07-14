@@ -1,6 +1,7 @@
 chess_processed_small.csv
 chess_board.svg
 data/*
+otherway/rawdata.csv
 
 
 # Byte-compiled / optimized / DLL files
