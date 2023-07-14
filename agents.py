@@ -2,41 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-
-# class ChessNet(nn.Module):
-#     def __init__(self):
-#         super(ChessNet, self).__init__()
-#         self.head = nn.Sequential(
-#             nn.Conv2d(6, 64, kernel_size=3, padding=1),
-#             nn.LeakyReLU(),
-#             nn.Conv2d(64, 128, kernel_size=3, padding=1),
-#             nn.LeakyReLU(),
-#             nn.Conv2d(128, 256, kernel_size=3, padding=1),
-#             nn.LeakyReLU(),
-#             nn.Conv2d(256, 1, kernel_size=3, padding=1),
-#             nn.LeakyReLU(),
-#         )
-#         self.body = nn.Sequential(
-#             nn.Linear(64, 128),
-#             nn.LeakyReLU(),
-#             nn.Linear(128, 64),
-#             nn.LeakyReLU(),
-#             nn.Linear(64, 1),
-#             nn.Tanh(),
-#         )
-
-#     def forward(self, x):
-#         x = self.head(x)
-#         x = x.view(-1, 64)
-#         x = self.body(x)
-#         return x
-    
-#     def predict_board(self, x):
-#         x = x.reshape(1, 6, 8, 8)
-#         x = self.forward(x)
-#         return x.item()
-
-
+import chess.pgn
 
 class ResBlock(nn.Module):
     def __init__(self) -> None:
@@ -53,13 +19,28 @@ class ResBlock(nn.Module):
         x1 += x
         return F.leaky_relu(x1)
 
-class ChessNet(nn.Module):
+class MoveProcessor(nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.convs = nn.Sequential(
-            nn.Conv2d(12, 64, kernel_size=3, padding=1),
+            nn.Conv2d(6, 64, kernel_size=3, padding=1),
             nn.LeakyReLU(),
-            *[ResBlock() for _ in range(5)],
+            *[ResBlock() for _ in range(4)],
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.LeakyReLU(),
+        )
+    
+    def forward(self, x):
+        return self.convs(x)
+
+class ChessNet(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.move_processor = MoveProcessor()
+        self.convs = nn.Sequential(
+            nn.Conv2d(64*4, 64, kernel_size=3, padding=1),
+            nn.LeakyReLU(),
+            *[ResBlock() for _ in range(1)],
             nn.Flatten(),
             nn.Linear(64*8*8, 256),
             nn.LeakyReLU(),
@@ -68,28 +49,48 @@ class ChessNet(nn.Module):
         )
     
     def forward(self, x):
+        newx = []
+        for i in range(4):
+            newx.append(self.move_processor(x[:, i*6:(i+1)*6, :, :]))
+        x = torch.cat(newx, dim=1)
         return self.convs(x)
     
     def predict(self, x):
         x = x.reshape(1, 6, 8, 8)
         return self.forward(x).item()
-
-class NextMovePredictor(nn.Module):
+    
+class ChessAgent(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        self.convs = nn.Sequential(
-            nn.Conv2d(12, 64, kernel_size=3, padding=1),
-            nn.LeakyReLU(),
-            *[ResBlock() for _ in range(5)],
-            nn.Flatten(),
-            nn.Linear(64*8*8, 128)
-        )
+        self.chessnet = ChessNet()
     
-    def forward(self, x : torch.Tensor):
-        nonlegal_to = x[:, -6:, :, :].sum(dim=1, keepdim=True) > 0 # N, 8, 8
-        nonlegal_from = x[:, :6, :, :].sum(dim=1, keepdim=True) <= 0 # N, 8, 8
-        x = self.convs(x)
-        x = x.reshape(-1, 2, 8, 8)
-        x = x[:, 0, :, :].masked_fill_(nonlegal_from, float('-inf'))
-        x = x[:, 1, :, :].masked_fill_(nonlegal_to, float('-inf'))
-        return x
+    def forward(self, x):
+        return self.chessnet(x)
+    
+    def board_to_tensor(self, board: chess.Board):
+        piece_map = board.piece_map()
+        tensor = torch.zeros(12, 8, 8)
+        for pos, piece in piece_map.items():
+            layer = (piece.color * 6) + piece.piece_type - 1
+            row, col = divmod(pos, 8)
+            tensor[layer, row, col] = 1
+        board.move_stack
+        return tensor
+
+    def predict(self, board: chess.Board):
+        tensor_list = []
+        clone = board.copy()
+        
+        for _ in range(3):
+            tensor = self.board_to_tensor(clone)
+            tensor_list.append(tensor)
+            if len(clone.move_stack) > 0:
+                clone.pop()  # Revert the last move
+
+        input_tensor = torch.stack(tensor_list[::-1]).unsqueeze(0)  # Reverse to get chronological order
+
+        if board.turn == chess.BLACK:
+            input_tensor = torch.flip(input_tensor, [2]).mul(-1)
+
+        
+        return self.forward(input_tensor).item()

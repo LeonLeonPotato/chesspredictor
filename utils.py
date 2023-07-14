@@ -5,6 +5,47 @@ import numpy as np
 import torch
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
+import io
+import chess.pgn
+
+def board_to_array(board):
+    board_state = np.zeros((6, 8, 8), dtype=np.int8)
+
+    piece_dict = {
+        'P': 0,  # White Pawn
+        'R': 1,  # White Rook
+        'N': 2,  # White Knight
+        'B': 3,  # White Bishop
+        'Q': 4,  # White Queen
+        'K': 5,  # White King
+    }
+
+    for i in range(8):
+        for j in range(8):
+            piece = board.piece_at(chess.square(i, j))
+
+            if piece:
+                piece_str = str(piece)
+                color = int(piece_str.isupper())
+                layer = piece_dict[piece_str.upper()]
+                board_state[layer, 7-j, i] = color*2-1
+            
+    return board_state
+
+def pgn_to_states(p):
+    game_states = []
+
+    p = io.StringIO(p)
+    game = chess.pgn.read_game(p)
+    p.close()
+
+    board = game.board()
+    for i, move in enumerate(game.mainline_moves()):
+        board.push(move)
+        board_state = board_to_array(board)
+        game_states.append(board_state)
+
+    return game_states
 
 
 def describe(arr):
@@ -91,21 +132,21 @@ def train_model(model, loss_fn, optimizer, train_loader, val_loader, epochs):
         Y = np.array(epoch_times).reshape(-1, 1)
         linear_regressor = LinearRegression()
         linear_regressor.fit(X, Y)
-        total_training_time_predicted = linear_regressor.predict([[epochs]])[0][0] - time.time()
+        total_training_time_predicted = linear_regressor.predict([[epochs]])[0][0]
         print(f"Predicted total training time for {epochs} epochs: {total_training_time_predicted:.2f} seconds")
 
-    # Loss plot
-    plt.figure(figsize=(12, 6))
-    plt.plot(train_losses, label='Train')
-    val_plot_x = np.linspace(0, 1, len(val_losses)) * len(train_losses)
-    plt.plot(val_plot_x, val_losses, label='Val')
-    val_plot_x = np.linspace(0, 1, len(val_accuracies)) * len(train_losses)
-    plt.plot(val_plot_x, val_accuracies, label='Val accuracy')
-    plt.title('Loss over epochs')
-    plt.xlabel('Epochs')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.show()
+        # Loss plot
+        plt.figure(figsize=(12, 6))
+        plt.plot(train_losses, label='Train')
+        val_plot_x = np.linspace(0, 1, len(val_losses)) * len(train_losses)
+        plt.plot(val_plot_x, val_losses, label='Val')
+        val_plot_x = np.linspace(0, 1, len(val_accuracies)) * len(train_losses)
+        plt.plot(val_plot_x, val_accuracies, label='Val accuracy')
+        plt.title('Loss over epochs')
+        plt.xlabel('Epochs')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.show()
 
 from sklearn.metrics import mean_squared_error
 
@@ -137,3 +178,6 @@ def test_model(model, test_loader):
     print(f'Test Accuracy: {100*test_accuracy/test_total:.2f}%')
     mse = mean_squared_error(targets, predictions)
     print(f'Test MSE: {mse}')
+
+    print(outputs.T.reshape(-1))
+    print(labels.T.reshape(-1))

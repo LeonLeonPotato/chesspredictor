@@ -9,8 +9,8 @@ import utils
 
 learning_rate = 0.0015
 weight_decay = 0.0001
-batch_size = 256
-epochs = 10
+batch_size = 512
+epochs = 6
 
 
 X : np.ndarray = np.load('data/X.npy')
@@ -25,8 +25,8 @@ model = agents.ChessNet().to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 criterion = torch.nn.MSELoss()
 
-torchscript = torch.jit.trace(model, torch.rand(12, 12, 8, 8).to(device))
-torchscript.save('models/model_full_medium_resnet2.pt')
+# torchscript = torch.jit.trace(model, torch.rand(12, 24, 8, 8, device=device))
+# torchscript.save('models/model_full_large_resnet2.pt')
 
 X_train = torch.from_numpy(train[0]).float()
 Y_train = torch.from_numpy(train[1]).float().unsqueeze(1)
@@ -41,5 +41,5 @@ val_loader = data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
 utils.train_model(model, criterion, optimizer, train_loader, val_loader, epochs)
 
-torchscript = torch.jit.trace(model, torch.rand(12, 12, 8, 8).to(device))
-torchscript.save('models/model_full_medium_resnet2.pt')
+torchscript = torch.jit.trace(model, torch.rand(12, 24, 8, 8).to(device))
+torchscript.save('models/model_full_large_resnet3.pt')

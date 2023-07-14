@@ -3,6 +3,7 @@ import time
 with open("C:\\Users\\Leon\\Desktop\\projects\\ucla\\rawdata.txt", "r") as f:
     data = f.readlines()[5:]
 
+@lambda f:f()
 def process():
     processed = open("chess_processed_small.csv", "w")
 
@@ -30,10 +31,10 @@ def process():
         if "blen_false" in metadata[15] and metadata[3] != "None" and metadata[4] != "None":
             welo, belo = int(metadata[3]), int(metadata[4])
             if pgn.endswith("#"):
-                if welo < 2300 or belo < 2300:
+                if welo < 2000 or belo < 2000:
                     continue
             elif winner == "1/2-1/2":
-                if welo < 2700 or belo < 2700:
+                if welo < 2500 or belo < 2500:
                     continue
             else: continue
 
@@ -58,5 +59,3 @@ def process():
     print("done")
     processed.write(processed_cache)
     processed.close()
-
-process()

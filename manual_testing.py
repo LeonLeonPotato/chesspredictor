@@ -7,6 +7,14 @@ import agents
 import utils
 import chess.pgn
 import io
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.collections as mcoll
+import matplotlib.colors as mcolors
+
+import shutil
+shutil.rmtree(matplotlib.get_cachedir())
 
 def board_to_array(board):
     board_state = np.zeros((6, 8, 8), dtype=np.int8)
@@ -47,43 +55,48 @@ def pgn_to_states(p):
 
     return game_states
 
-pgn = """
-
-1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7
-6. d3 b5 7. Bb3 d6 8. a4 Bd7 9. h3 O-O 10. Be3 Na5
-11. Ba2 bxa4 12. Nc3 Rb8 13. Bb1 Qe8 14. b3 c5 15. Nxa4 Nc6
-16. Nc3 a5 17. Nd2 Be6 18. Nc4 d5 19. exd5 Nxd5 20. Bd2 Nxc3
-21. Bxc3 Bxc4 22. bxc4 Bd8 23. Bd2 Bc7 24. c3 f5 25. Re1 Rd8
-26. Ra2 Qg6 27. Qe2 Qd6 28. g3 Rde8 29. Qf3 e4 30. dxe4 Ne5
-31. Qg2 Nd3 32. Bxd3 Qxd3 33. exf5 Rxe1+ 34. Bxe1 Qxc4 35. Ra1 Rxf5
-36. Bd2 h6 37. Qc6 Rf7 38. Re1 Kh7 39. Be3 Be5 40. Qe8 Bxc3
-41. Rc1 Rf6 42. Qd7 Qe2 43. Qd5 Bb4 44. Qe4+ Kg8 45. Qd5+ Kh7
-46. Qe4+ Rg6 47. Qf5 c4 48. h4 Qd3 49. Qf3 Rf6 50. Qg4 c3
-51. Rd1 Qg6 52. Qc8 Rc6 53. Qa8 Rd6 54. Rxd6 Qxd6 55. Qe4+ Qg6
-56. Qc4 Qb1+ 57. Kh2 a4 58. Bd4 a3 59. Qc7 Qg6 60. Qc4 c2
-61. Be3 Bd6 62. Kg2 h5 63. Kf1 Be5 64. g4 hxg4 65. h5 Qf5
-66. Qd5 g3 67. f4 a2 68. Qxa2 Bxf4 0-1
+pgn="""
+1. e4 Nc6 { B00 Nimzowitsch Defense } 2. Bc4 e6 3. Qh5 g6 4. Qf3 f5 5. exf5 gxf5 6. Qh5+ Ke7 7. Qg5+ Nf6 8. d3 Rg8 9. Qh4 d5 10. Bb5 a6 11. Bxc6 bxc6 12. Bh6 Ke8 13. Bxf8 Rxf8 14. Nf3 Rg8 15. Qh6 Rb8 16. b3 Rxg2 17. Ne5 Ng4 18. Qh5+ Ke7 19. Nxc6+ Kd6 20. Nxd8 Nf6 21. Nf7+ Kc6 22. Nd8+ Kd7 23. Qf7+ Kd6 24. Qxf6 Rg6 25. Qf8+ Ke5 26. Nc6+ Kf4 27. Nxb8 Bb7 28. Qb4+ Kg5 29. Qxb7 e5 30. Qxc7 e4 31. dxe4 dxe4 32. Nxa6 h6 33. Rg1+ Kf6 34. Rxg6+ Kxg6 35. b4 Kg5 36. b5 f4 37. b6 e3 38. b7 exf2+ 39. Kxf2 Kg4 40. b8=Q h5 41. Qf7 h4 42. Qbg8+ Kh3 43. Qb3+ Kxh2 44. Qg2# { White wins by checkmate. } 1-0
 """
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('Using device:', device)
 
-model = torch.jit.load('models/model_full_medium_resnet2.pt').to(device)
+model = torch.jit.load('models/model_full_large_resnet.pt').to(device)
 
 states = pgn_to_states(pgn)
 states = torch.from_numpy(np.array(states)).to(device, dtype=torch.float32)
 
 model.eval()
+preds = []
 
 a = 0
-with torch.no_grad():
-    laststate = torch.zeros((1, 6, 8, 8), dtype=torch.float32).to(device)
+with torch.inference_mode():
+    laststates = [torch.zeros((6, 8, 8), device=device) for i in range(4)]
     for i in states:
-        i = i.unsqueeze(0)
-        i = torch.cat((laststate, i), dim=1)
-        a += (1 - model(i).item())
-        laststate = i[:, -6:, :, :]
-        print(model(i).item())
+        laststates.append(i)
+        laststates.pop(0)
+        i = torch.stack(laststates, dim=0).float().reshape(1, 6*4, 8, 8)
+        y_pred = model(i)
+        preds.append(y_pred.item())
+        a += (1 - y_pred.item())**2
+        #laststate = i[:, -6:, :, :]
+        print(y_pred.item())
 
+cmap = plt.get_cmap('coolwarm')
+
+def colorline(x, y1, y2):
+    x = np.linspace(x, x + 0.5, 5)
+    y = np.linspace(y1, y2, 5)
+    for i in range(4):
+        plt.plot([x[i], x[i + 1]], [y[i], y[i + 1]], color=cmap((y[i] + 1) / 2))
+
+for i in range(len(preds) - 1):
+    colorline(i / 2, preds[i], preds[i + 1])
+
+plt.ylim(-1, 1)
+plt.show()
+
+print("MSE:")
 print(a / len(states))
 print(a)

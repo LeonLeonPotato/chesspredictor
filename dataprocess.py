@@ -12,14 +12,22 @@ winner_w = df[df['winner'] == 1]
 winner_b = df[df['winner'] == -1]
 tie = df[df['winner'] == 0]
 
+print(df['winner'].value_counts())
+minlen = min(len(winner_w), len(winner_b), len(tie))
+
 winner_w = resample(winner_w, 
                     replace=False,    # sample without replacement
-                    n_samples=len(winner_b),  # to match minority class
+                    n_samples=minlen,  # to match minority class
                     random_state=1337) # reproducible results
 
-tie = resample(tie,
+# tie = resample(tie,
+#                 replace=False,    # sample without replacement
+#                 n_samples=minlen,  # to match minority class
+#                 random_state=1337) # reproducible results
+
+winner_b = resample(winner_b,
                 replace=False,    # sample without replacement
-                n_samples=len(winner_b),  # to match minority class
+                n_samples=minlen,  # to match minority class
                 random_state=1337) # reproducible results
 
 df = pd.concat([winner_w, winner_b, tie])
@@ -68,15 +76,22 @@ def pgn_to_states(p):
 X = []
 Y = []
 
+t = time.time()
+
 for idx, row in df.iterrows():
     states = pgn_to_states(row['pgn'])
     winner = row['winner']
     
-    laststate = np.zeros((6, 8, 8), dtype=np.int8)
+    laststates = [np.zeros((6, 8, 8), dtype=np.int8) for i in range(4)]
     for state in states:
-        X.append(np.concatenate((state, laststate), axis=0))
+        laststates.pop(0)
+        laststates.append(state)
+        X.append(np.array(laststates).reshape((24, 8, 8)))
         Y.append(winner)
-        laststate = state
+    
+    if idx % 1000 == 0:
+        print(idx, df.shape, time.time() - t)
+        t = time.time()
 
 X = np.array(X)
 Y = np.array(Y)
