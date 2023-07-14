@@ -75,9 +75,6 @@ def train_model(model, loss_fn, optimizer, train_loader, val_loader, epochs):
     train_losses = []
     val_losses = []
     val_accuracies = []
-    epoch_times = []
-
-    start_time = time.time()
 
     for epoch in range(epochs):
         model.train()
@@ -122,18 +119,7 @@ def train_model(model, loss_fn, optimizer, train_loader, val_loader, epochs):
         val_losses.extend(batch_val_losses)
         val_accuracies.append(val_accuracy/val_total)
 
-        epoch_time = time.time() - start_time
-        epoch_times.append(epoch_time)
-
         print(f'Epoch: {epoch+1}/{epochs}, Train Loss: {np.mean(batch_losses):.4f}, Val Loss: {np.mean(batch_val_losses):.4f}, Val Accuracy: {val_accuracy/val_total:.4f}')
-
-        # Training Time prediction
-        X = np.array(range(1, len(epoch_times) + 1)).reshape(-1, 1)
-        Y = np.array(epoch_times).reshape(-1, 1)
-        linear_regressor = LinearRegression()
-        linear_regressor.fit(X, Y)
-        total_training_time_predicted = linear_regressor.predict([[epochs]])[0][0]
-        print(f"Predicted total training time for {epochs} epochs: {total_training_time_predicted:.2f} seconds")
 
         # Loss plot
         plt.figure(figsize=(12, 6))

@@ -41,5 +41,5 @@ val_loader = data.DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
 utils.train_model(model, criterion, optimizer, train_loader, val_loader, epochs)
 
-torchscript = torch.jit.trace(model, torch.rand(12, 24, 8, 8).to(device))
-torchscript.save('models/model_full_large_resnet3.pt')
+# torchscript = torch.jit.trace(model, torch.rand(12, 24, 8, 8).to(device))
+# torchscript.save('models/model_full_large_resnet3.pt')

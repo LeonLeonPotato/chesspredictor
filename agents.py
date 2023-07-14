@@ -39,7 +39,6 @@ class ChessNet(nn.Module):
         self.move_processor = MoveProcessor()
         self.convs = nn.Sequential(
             nn.Conv2d(64*4, 64, kernel_size=3, padding=1),
-            nn.LeakyReLU(),
             *[ResBlock() for _ in range(1)],
             nn.Flatten(),
             nn.Linear(64*8*8, 256),

@@ -14,7 +14,7 @@ train, val, test = utils.train_val_test_split(X, Y)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('Using device:', device)
 
-model = torch.jit.load('models/model_full_large_resnet3.pt').to(device)
+model = torch.jit.load('models/model_full_large_resnet4.pt').to(device)
 
 X_test = torch.from_numpy(test[0]).float()
 Y_test = torch.from_numpy(test[1]).float().unsqueeze(1)

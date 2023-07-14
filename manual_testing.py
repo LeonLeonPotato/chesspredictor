@@ -62,7 +62,7 @@ pgn="""
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('Using device:', device)
 
-model = torch.jit.load('models/model_full_large_resnet.pt').to(device)
+model = torch.jit.load('models/model_full_large_resnet4.pt').to(device)
 
 states = pgn_to_states(pgn)
 states = torch.from_numpy(np.array(states)).to(device, dtype=torch.float32)
