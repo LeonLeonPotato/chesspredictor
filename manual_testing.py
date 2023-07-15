@@ -56,7 +56,11 @@ def pgn_to_states(p):
     return game_states
 
 pgn="""
-1. e4 Nc6 { B00 Nimzowitsch Defense } 2. Bc4 e6 3. Qh5 g6 4. Qf3 f5 5. exf5 gxf5 6. Qh5+ Ke7 7. Qg5+ Nf6 8. d3 Rg8 9. Qh4 d5 10. Bb5 a6 11. Bxc6 bxc6 12. Bh6 Ke8 13. Bxf8 Rxf8 14. Nf3 Rg8 15. Qh6 Rb8 16. b3 Rxg2 17. Ne5 Ng4 18. Qh5+ Ke7 19. Nxc6+ Kd6 20. Nxd8 Nf6 21. Nf7+ Kc6 22. Nd8+ Kd7 23. Qf7+ Kd6 24. Qxf6 Rg6 25. Qf8+ Ke5 26. Nc6+ Kf4 27. Nxb8 Bb7 28. Qb4+ Kg5 29. Qxb7 e5 30. Qxc7 e4 31. dxe4 dxe4 32. Nxa6 h6 33. Rg1+ Kf6 34. Rxg6+ Kxg6 35. b4 Kg5 36. b5 f4 37. b6 e3 38. b7 exf2+ 39. Kxf2 Kg4 40. b8=Q h5 41. Qf7 h4 42. Qbg8+ Kh3 43. Qb3+ Kxh2 44. Qg2# { White wins by checkmate. } 1-0
+1. e4 e5 2. Bc4 Bc5 3. d3 c6 4. Qe2 d6 5. f4 exf4 6. Bxf4 Qb6
+7. Qf3 Qxb2 8. Bxf7+ Kd7 9. Ne2 Qxa1 10. Kd2 Bb4+ 11. Nbc3
+Bxc3+ 12. Nxc3 Qxh1 13. Qg4+ Kc7 14. Qxg7 Nd7 15. Qg3 b6
+16. Nb5+ cxb5 17. Bxd6+ Kb7 18. Bd5+ Ka6 19. d4 b4 20. Bxb4
+Kb5 21. c4+ Kxb4 22. Qb3+ Ka5 23. Qb5# 1-0
 """
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
